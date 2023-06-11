@@ -1,6 +1,6 @@
 # simple-donate-bot
 
-An example of simple bot which can be used for donations or payments of some sort.
+An example of simple Telegram bot which can be used for donations or payments of some sort.
 
 ### Programming language and packages versions
 
