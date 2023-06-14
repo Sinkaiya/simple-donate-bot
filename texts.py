@@ -1,3 +1,5 @@
+# An interface locales.
+
 texts = {
     'ru': {
         'introduce_msg': 'позвольте засвидетельствовать вам своё почтение. '
@@ -39,3 +41,19 @@ texts = {
         'language_switch': 'Interface language switched to English.'
     }
 }
+
+# Logging messages.
+
+bot_started = 'The bot started by the user'
+
+locale_change = 'The bot\'s interface set to default.'
+
+donate_menu_shown = 'The donation menu displayed to the user'
+
+donate_menu_closed = 'The donation meny closed by the user'
+
+pre_checkout_query = 'An pre-checkout query created.'
+
+thanks_sent = 'The payment were successful. A thanks sent to the user.'
+
+big_thanks_sent = 'The payment were successful. A big thanks sent to the user.'

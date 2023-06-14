@@ -31,6 +31,8 @@ def send_welcome(message):
                      'Hello, {}. {}\n\nЗдравствуйте, {}, {}'.format(
                          full_name, texts.texts['en']['introduce_msg'],
                          full_name, texts.texts['ru']['introduce_msg']))
+    logging.info(f'{texts.bot_started} {telegram_id}.')
+    logging.info(texts.locale_change)
 
 
 @bot.message_handler(commands=['language'])
@@ -41,14 +43,13 @@ def switch_language(message):
     else:
         utils.set_locale('ru')
     bot.send_message(telegram_id, texts.texts[utils.get_locale()]['language_switch'])
-
-
-locale = utils.get_locale()
+    logging.info(f'The interface set to \'{utils.get_locale()}\' by the user {telegram_id}.')
 
 
 @bot.message_handler(commands=['donate'])
 def donate_moar_plz(message):
     telegram_id = message.chat.id
+    locale = utils.get_locale()
     img = open('img/support_us.jpg', 'rb')
     keyboard = InlineKeyboardMarkup(row_width=2)
     if locale == 'ru':
@@ -57,6 +58,7 @@ def donate_moar_plz(message):
         keyboard.add(*keyboards.donate_en)
     bot.send_photo(telegram_id, img, texts.texts[locale]['money_ask'], reply_markup=keyboard)
     img.close()
+    logging.info(f'{texts.donate_menu_shown} {telegram_id}.')
 
 
 @bot.callback_query_handler(lambda call: True)
@@ -64,47 +66,60 @@ def callback_query(call):
     command = call.data
     message_id = call.message.id
     telegram_id = call.from_user.id
-    payment_token, invoice_title, currency = None, None, None
-    amount = int(command.split('_')[1])  # donate_50 -> 50
     if command == 'close_keyboard':
         bot.edit_message_reply_markup(telegram_id, message_id)
-    if locale == 'ru':
-        payment_token = config.get('telegram', 'payment_token_rub')
-        invoice_title = f'Донат в {amount} рублей.'
-        currency = 'rub'
-    if locale == 'en':
-        payment_token = config.get('telegram', 'payment_token_usd')
-        invoice_title = f'{amount}$ donate.'
-        currency = 'usd'
-    if payment_token.split(':')[1] == 'TEST':
-        bot.send_message(telegram_id, texts.texts[locale]['test_payment'])
-    bot.send_invoice(telegram_id,
-                     title=invoice_title,
-                     description=invoice_title,
-                     invoice_payload=f'{amount} {currency} donate invoice',
-                     provider_token=payment_token,
-                     currency=currency,
-                     prices=[LabeledPrice(label=invoice_title, amount=amount * 100)],
-                     photo_url=donate_img,
-                     photo_width=360,
-                     photo_height=420,
-                     photo_size=300,
-                     is_flexible=False,
-                     start_parameter="1")
+        logging.info(f'{texts.donate_menu_closed} {telegram_id}.')
+    else:
+        payment_token, invoice_title, currency = None, None, None
+        amount = int(command.split('_')[1])  # donate_50 -> 50
+        locale = utils.get_locale()
+        if locale == 'ru':
+            payment_token = config.get('telegram', 'payment_token_rub')
+            invoice_title = f'Донат в {amount} рублей.'
+            currency = 'rub'
+        if locale == 'en':
+            payment_token = config.get('telegram', 'payment_token_usd')
+            invoice_title = f'{amount}$ donate.'
+            currency = 'usd'
+        if payment_token.split(':')[1] == 'TEST':
+            bot.send_message(telegram_id, texts.texts[locale]['test_payment'])
+        bot.send_invoice(telegram_id,
+                         title=invoice_title,
+                         description=invoice_title,
+                         invoice_payload=f'{amount} {currency} donate invoice',
+                         provider_token=payment_token,
+                         currency=currency,
+                         prices=[LabeledPrice(label=invoice_title, amount=amount * 100)],
+                         photo_url=donate_img,
+                         photo_width=360,
+                         photo_height=420,
+                         photo_size=300,
+                         is_flexible=False,
+                         start_parameter="1")
+        logging.info(f'An invoice for {amount} {currency} created for user {telegram_id}.')
 
 
 @bot.pre_checkout_query_handler(func=lambda query: True)
 def checkout(pre_checkout_query):
+    locale = utils.get_locale()
     bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True,
                                   error_message=texts.texts[locale]['checkout_err'])
+    logging.info(texts.pre_checkout_query)
 
 
 @bot.message_handler(content_types=['successful_payment'])
 def got_payment(message):
-    if int(message.successful_payment.total_amount / 100) < 500:
+    locale = utils.get_locale()
+    if locale == 'ru':
+        thanks_threshold = 500
+    else:
+        thanks_threshold = 6
+    if int(message.successful_payment.total_amount / 100) < thanks_threshold:
         bot.send_message(message.chat.id, texts.texts[locale]['thanks'])
+        logging.info(texts.thanks_sent)
     else:
         bot.send_message(message.chat.id, texts.texts[locale]['big_thanks'])
+        logging.info(texts.big_thanks_sent)
 
 
-bot.infinity_polling(skip_pending=True)
+bot.infinity_polling(skip_pending=True, allowed_updates=[])
